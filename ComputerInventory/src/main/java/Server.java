@@ -7,8 +7,8 @@ import java.net.Socket;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
-
 public class Server {
 
     public static void main(String[] args) {
@@ -31,6 +31,8 @@ public class Server {
 
                     // Insert data into MySQL
                     insertDataIntoMySQL(inputLine);
+                    // Display MySQL table contents
+                    displayTableContents();
                 }
 
                 clientSocket.close();
@@ -58,6 +60,38 @@ public class Server {
             int rowsInserted = preparedStatement.executeUpdate();
             if (rowsInserted > 0) {
                 System.out.println("Data inserted into MySQL successfully.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    private static void displayTableContents() {
+        // Database connection parameters
+        String url = "jdbc:mysql://localhost:3306/ComputerInventoryDB";
+        String username = "root";
+        String password = "007682Abv";
+
+        // SQL query to select all data from table
+        String sql = "SELECT * FROM categories";
+
+        try (Connection connection = DriverManager.getConnection(url, username, password);
+             PreparedStatement preparedStatement = connection.prepareStatement(sql);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
+
+            System.out.println("Table contents:");
+
+            // Print column names
+            for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
+                System.out.print(resultSet.getMetaData().getColumnName(i) + "\t");
+            }
+            System.out.println();
+
+            // Print table data
+            while (resultSet.next()) {
+                for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
+                    System.out.print(resultSet.getString(i) + "\t");
+                }
+                System.out.println();
             }
         } catch (SQLException e) {
             e.printStackTrace();
