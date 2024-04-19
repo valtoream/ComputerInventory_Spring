@@ -1,3 +1,5 @@
+import Classes.AuthenticationManager;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -9,7 +11,22 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
 public class Server {
+    private static final String URL = "jdbc:mysql://localhost:3306/ComputerInventoryDB";
+    private static final String USERNAME = "root";
+    private static final String PASSWORD = "007682Abv";
+
+    // Database connection
+    private static Connection connection;
+    // Initialize the database connection
+    static {
+        try {
+            connection = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static void main(String[] args) {
         final int PORT = 8081;
@@ -25,14 +42,13 @@ public class Server {
                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
                 String inputLine;
+                String tableInputLine;
                 while ((inputLine = in.readLine()) != null) {
                     System.out.println("Received from client: " + inputLine);
                     out.println("Echo: " + inputLine);
 
                     // Insert data into MySQL
                     insertDataIntoMySQL(inputLine);
-                    // Display MySQL table contents
-                    displayTableContents();
                 }
 
                 clientSocket.close();
@@ -42,17 +58,46 @@ public class Server {
         }
     }
 
-    private static void insertDataIntoMySQL(String data) {
-        // Database connection parameters
-        String url = "jdbc:mysql://localhost:3306/ComputerInventoryDB";
-        String username = "root";
-        String password = "007682Abv";
+    /*
+    // Display MySQL table contents
+                    System.out.println("Input the table ");
+    tableInputLine = in.readLine();
+    displayTableContents(tableInputLine);
+    */
+    // Inside your Server class
 
+
+
+    //HANDLE CLIENT LOGIN
+    private static void handleClient(Socket clientSocket) {
+        try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
+
+            out.println("Enter username:");
+            String username = in.readLine();
+
+            out.println("Enter password:");
+            String password = in.readLine();
+
+            boolean isAuthenticated = AuthenticationManager.authenticate(username, password);
+            if (isAuthenticated) {
+                out.println("Login successful");
+                // Proceed with further communication with the authenticated client
+            } else {
+                out.println("Invalid username or password");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    //INSERT INTO DATABASE
+    private static void insertDataIntoMySQL(String data) {
         // SQL query to insert data
         String sql = "INSERT INTO categories (name) VALUES (?)";
 
-        try (Connection connection = DriverManager.getConnection(url, username, password);
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             // Set parameter values
             preparedStatement.setString(1, data);
 
@@ -65,17 +110,10 @@ public class Server {
             e.printStackTrace();
         }
     }
-    private static void displayTableContents() {
-        // Database connection parameters
-        String url = "jdbc:mysql://localhost:3306/ComputerInventoryDB";
-        String username = "root";
-        String password = "007682Abv";
-
-        // SQL query to select all data from table
-        String sql = "SELECT * FROM categories";
-
-        try (Connection connection = DriverManager.getConnection(url, username, password);
-             PreparedStatement preparedStatement = connection.prepareStatement(sql);
+    //DISPLAY FROM DATABASE
+    private static void displayTableContents(String tableName) {
+        String sql = "SELECT * FROM " + tableName;
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql);
              ResultSet resultSet = preparedStatement.executeQuery()) {
 
             System.out.println("Table contents:");
